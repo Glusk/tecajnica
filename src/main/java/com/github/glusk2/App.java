@@ -1,18 +1,22 @@
 package com.github.glusk2;
 
+import java.net.URL;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Set;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 import com.jcabi.xml.XML;
 import com.jcabi.xml.XMLDocument;
 
 import javafx.application.Application;
+import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
@@ -26,8 +30,11 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.layout.HBox;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javafx.util.StringConverter;
 
@@ -41,9 +48,7 @@ public class App extends Application {
     public App() throws Exception {
         this(
             new XMLDocument(
-                Thread.currentThread()
-                      .getContextClassLoader()
-                      .getResource("dtecbs-l.xml")
+                new URL("https://www.bsi.si/_data/tecajnice/dtecbs-l.xml")
             )
             .registerNs("bsi", "http://www.bsi.si"),
             DateTimeFormatter.ofPattern("yyyy-MM-dd"),
@@ -66,33 +71,42 @@ public class App extends Application {
 
     public static void main(String[] args) throws Exception {
         Locale.setDefault(new Locale("sl"));
-        new App().launch(args);
+        launch(args);
     }
 
     @Override
     public void start(Stage primaryStage) throws Exception {
-        List<CheckBox> cbListCurrency = new ArrayList<CheckBox>();
-        Set<String> valute =
-            new HashSet<String>(
-                xml.xpath("//bsi:tecajnica/bsi:tecaj/@oznaka")
-            );
-        for (String oznaka : valute) {
-            CheckBox cb = new CheckBox(oznaka);
-            cbListCurrency.add(cb);
-            cb.setMinWidth(100);
-        }
+        List<CheckBox> currencies =
+               xml.xpath("//bsi:tecajnica/bsi:tecaj/@oznaka")
+              .parallelStream()
+              .distinct()
+              .sorted()
+              .map(oznaka -> new CheckBox(oznaka))
+              .collect(Collectors.toList());
         DatePicker dpFrom = new DatePicker(LocalDate.now().minusYears(1));
         DatePicker dpTo = new DatePicker(LocalDate.now());
 
-        final HBox rootPane =
-            new HBox(
+        DatePicker dpRates = new DatePicker(LocalDate.now());
+        dpRates.setMaxWidth(Double.MAX_VALUE);
+
+        Label tableTitle = new Label("Tečajnica:");
+        tableTitle.setFont(new Font("Arial", 16));
+        VBox tablePane = new VBox(10, tableTitle, dpRates);
+        tablePane.setPadding(new Insets(10, 10, 10, 10));
+
+        BorderPane rootPane =
+            new BorderPane(
+                null,
+                null,
+                tablePane,
+                null,
                 new VBox(
                     5,
                     new Label("Valute:"),
                     new ScrollPane(
                         new VBox(
                             5,
-                            cbListCurrency.toArray(new CheckBox[0])
+                            currencies.toArray(new CheckBox[0])
                         )
                     ),
                     new Label("Od:"),
@@ -100,53 +114,57 @@ public class App extends Application {
                     new Label("Do:"),
                     dpTo
                 )
-                // area chart insert point
             );
-        EventHandler<ActionEvent> eh = (event) -> {
+
+        EventHandler<ActionEvent> chartDrawingHandler = (event) -> {
             LocalDate fromDate = dpFrom.getValue();
             LocalDate toDate = dpTo.getValue();
 
-            long lowerBound = fromDate.toEpochDay();
-            long upperBound = toDate.toEpochDay();
-
             long daysDelta = ChronoUnit.DAYS.between(fromDate, toDate);
             if (daysDelta < 0) {
-                Alert alert = new Alert(
+                new Alert(
                     Alert.AlertType.WARNING,
                     "Datum začetka tečaja je za datumom konca tečaja!",
                     ButtonType.OK
-                );
-                alert.showAndWait();
+                ).showAndWait();
                 dpFrom.setValue(dpTo.getValue().minusDays(30));
                 return;
             }
-            long tickUnit = daysDelta < 31 ? 1 : (long)Math.ceil(daysDelta / 12);
+            long tickUnit =
+                daysDelta < 31 ? 1 : (long) Math.ceil(daysDelta / 12);
 
-            NumberAxis xAxis = new NumberAxis(lowerBound, upperBound, tickUnit);
+            NumberAxis xAxis =
+                new NumberAxis(
+                    fromDate.toEpochDay(),
+                    toDate.toEpochDay(),
+                    tickUnit
+                );
             xAxis.setTickLabelFormatter(new StringConverter<Number>() {
                 @Override
                 public String toString(Number object) {
-                    return LocalDate.ofEpochDay(object.longValue()).format(chartDateFormat);
+                    return LocalDate.ofEpochDay(
+                        object.longValue()).format(chartDateFormat);
                 }
-
                 @Override
                 public Number fromString(String string) {
-                    return LocalDate.parse(string, chartDateFormat).toEpochDay();
+                    return LocalDate.parse(
+                        string, chartDateFormat).toEpochDay();
                 }
             });
             xAxis.setTickLabelRotation(45);
 
-            NumberAxis yAxis = new NumberAxis();
-            AreaChart<Number,Number> ac = new AreaChart<Number,Number>(xAxis,yAxis);
+            AreaChart<Number,Number> ac =
+                new AreaChart<Number,Number>(
+                    xAxis,
+                    new NumberAxis()
+                );
             ac.setTitle("Tečaji");
-            ac.setMinWidth(1000);
+            ac.setPadding(new Insets(10, 30, 10, 30));
 
-            List<CheckBox> selected = new ArrayList<CheckBox>();
-            for (CheckBox cb : cbListCurrency) {
-                if (cb.isSelected()) {
-                    selected.add(cb);
-                }
-            }
+            List<String> selectedCurrencies = currencies.stream()
+                .filter(cb -> cb.isSelected())
+                .map(c -> c.getText())
+                .collect(Collectors.toList());
 
             List<XML> tecajnicas = xml.nodes(
                 String.format(
@@ -156,61 +174,131 @@ public class App extends Application {
                 )
             );
 
-            for (CheckBox cb : selected) {
-                XYChart.Series nextSeries= new XYChart.Series();
-                nextSeries.setName(cb.getText());
-                for (XML tecajnica : tecajnicas) {
-                    XML clonedTecajnica =
-                        new XMLDocument(
-                            tecajnica.toString()
-                        ).registerNs("bsi", "http://www.bsi.si");
+            Map<String, XYChart.Series> chartSeries =
+                new TreeMap<String, XYChart.Series>();
+            for (String currency : selectedCurrencies) {
+                XYChart.Series series = new XYChart.Series();
+                series.setName(currency);
+                chartSeries.put(currency, series);
+            }
+            for (XML tecajnica : tecajnicas) {
+                XML clonedTecajnica =
+                    new XMLDocument(
+                        tecajnica.toString()
+                    ).registerNs("bsi", "http://www.bsi.si");
 
-                    Long datum =
-                        LocalDate.parse(
-                            clonedTecajnica.xpath("/bsi:tecajnica/@datum").get(0),
-                            dbDateFormat
-                        ).toEpochDay();
-
+                LocalDate datum =
+                    LocalDate.parse(
+                        clonedTecajnica.xpath("/bsi:tecajnica/@datum").get(0),
+                        dbDateFormat
+                    );
+                for (String currency : selectedCurrencies) {
                     List<String> tecajQuery =
                         clonedTecajnica.xpath(
                             String.format(
                                 "/bsi:tecajnica/bsi:tecaj[@oznaka=\"%s\"]/text()",
-                                cb.getText()
+                                currency
                             )
                         );
                     if (tecajQuery.isEmpty()) {
                         continue;
                     }
 
-                    nextSeries.getData().add(
+                    chartSeries.get(currency).getData().add(
                         new XYChart.Data(
-                            datum,
+                            datum.toEpochDay(),
                             Double.parseDouble(tecajQuery.get(0))
                         )
                     );
                 }
-                ac.getData().addAll(nextSeries);
+            }
+
+            for (String currency : chartSeries.keySet()) {
+                ac.getData().add(chartSeries.get(currency));
             }
             ac.setCreateSymbols(false);
-            if (rootPane.getChildren().size() > 1) {
-                rootPane.getChildren().remove(1);
-            }
-            rootPane.getChildren().add(ac);
+            rootPane.setCenter(ac);
         };
-        dpFrom.setOnAction(eh);
-        dpTo.setOnAction(eh);
-        for (CheckBox cb : cbListCurrency) {
-            cb.setOnAction(eh);
+
+        EventHandler<ActionEvent> currencyRatesHandler = (event) -> {
+            LocalDate rateDate = dpRates.getValue();
+
+            List<String> selectedCurrencies = currencies.stream()
+                .filter(cb -> cb.isSelected())
+                .map(c -> c.getText())
+                .collect(Collectors.toList());
+
+            List<XML> tecajnicas = xml.nodes(
+                String.format(
+                    "//bsi:tecajnica[number(translate(@datum, '-', '')) <= %s]",
+                    rateDate.format(xmlComparableDateFormat)
+                )
+            );
+            if (!tecajnicas.isEmpty()) {
+                XML tecajnica = tecajnicas.get(tecajnicas.size() - 1);
+                XML clonedTecajnica =
+                    new XMLDocument(
+                        tecajnica.toString()
+                    ).registerNs("bsi", "http://www.bsi.si");
+
+                TableView table = new TableView();
+                ObservableList<ObservableList<String>> data =
+                    FXCollections.observableArrayList();
+                TableColumn<ObservableList<String>, String> valutaCol =
+                    new TableColumn<ObservableList<String>, String>("Valuta");
+                valutaCol.setCellValueFactory(
+                    param -> new ReadOnlyObjectWrapper<>(param.getValue().get(0))
+                );
+                TableColumn<ObservableList<String>, String> tecajCol =
+                    new TableColumn<ObservableList<String>, String>("Tečaj");
+                tecajCol.setCellValueFactory(
+                    param -> new ReadOnlyObjectWrapper<>(param.getValue().get(1))
+                );
+                table.getColumns().addAll(valutaCol, tecajCol);
+                table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+                for (String currency : selectedCurrencies) {
+                    List<String> tecajQuery =
+                        clonedTecajnica.xpath(
+                            String.format(
+                                "/bsi:tecajnica/bsi:tecaj[@oznaka=\"%s\"]/text()",
+                                currency
+                            )
+                        );
+                    if (tecajQuery.isEmpty()) {
+                        continue;
+                    }
+                    data.add(
+                        FXCollections.observableArrayList(
+                            currency,
+                            tecajQuery.get(0)
+                        )
+                    );
+                }
+                table.setItems(data);
+                while (tablePane.getChildren().size() > 2) {
+                    tablePane.getChildren().remove(2);
+                }
+                tablePane.getChildren().add(table);
+            }
+        };
+
+        dpFrom.setOnAction(chartDrawingHandler);
+        dpTo.setOnAction(chartDrawingHandler);
+        for (CheckBox cb : currencies) {
+            cb.addEventHandler(ActionEvent.ACTION, chartDrawingHandler);
+            cb.addEventHandler(ActionEvent.ACTION, currencyRatesHandler);
             if (cb.getText().equals("USD")) {
                 cb.fire();
             }
         }
+        dpRates.setOnAction(currencyRatesHandler);
 
         rootPane.setPadding(new Insets(10, 10, 10, 10));
         primaryStage.setTitle("Tečajnica");
         primaryStage.setScene(new Scene(rootPane));
-        primaryStage.setMinWidth(1200);
-        primaryStage.setMinHeight(500);
+        primaryStage.setMinHeight(400);
+        primaryStage.setMinWidth(800);
         primaryStage.show();
     }
 }
