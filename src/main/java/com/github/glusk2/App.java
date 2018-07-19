@@ -89,16 +89,11 @@ public class App extends Application {
         DatePicker dpRates = new DatePicker(LocalDate.now());
         dpRates.setMaxWidth(Double.MAX_VALUE);
 
-        Label tableTitle = new Label("Tečajnica:");
-        tableTitle.setFont(new Font("Arial", 16));
-        VBox tablePane = new VBox(10, tableTitle, dpRates);
-        tablePane.setPadding(new Insets(10, 10, 10, 10));
-
         BorderPane rootPane =
             new BorderPane(
                 null,
                 null,
-                tablePane,
+                null,
                 null,
                 new VBox(
                     5,
@@ -276,10 +271,14 @@ public class App extends Application {
                     );
                 }
                 table.setItems(data);
-                while (tablePane.getChildren().size() > 2) {
-                    tablePane.getChildren().remove(2);
-                }
-                tablePane.getChildren().add(table);
+
+                Label tableTitle = new Label("Tečajnica:");
+                tableTitle.setFont(new Font("Arial", 16));
+
+                VBox tablePane = new VBox(10, tableTitle, dpRates, table);
+                tablePane.setPadding(new Insets(10, 10, 10, 10));
+
+                rootPane.setRight(tablePane);
             }
         };
 
