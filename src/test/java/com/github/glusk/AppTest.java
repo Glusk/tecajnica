@@ -1,4 +1,4 @@
-package com.github.glusk2;
+package com.github.glusk;
 
 import static org.junit.Assert.assertEquals;
 
