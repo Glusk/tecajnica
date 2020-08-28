@@ -117,11 +117,11 @@ public class App extends Application {
 
             long daysDelta = ChronoUnit.DAYS.between(fromDate, toDate);
             if (daysDelta < 0) {
-                new Alert(
-                    Alert.AlertType.WARNING,
-                    "Datum začetka tečaja je za datumom konca tečaja!",
-                    ButtonType.OK
-                ).showAndWait();
+                Alert alert = new Alert(Alert.AlertType.WARNING);
+                alert.setTitle("Opozorilo");
+                alert.setHeaderText("Napačen vnos");
+                alert.setContentText("Datum začetka tečaja je za datumom konca tečaja!");
+                alert.showAndWait();
                 dpFrom.setValue(dpTo.getValue().minusDays(30));
                 return;
             }
