@@ -1,4 +1,4 @@
-package com.github.glusk;
+package com.github.glusk.tecajnica;
 
 import java.net.URL;
 import java.time.LocalDate;
