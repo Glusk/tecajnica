@@ -16,6 +16,19 @@ Kot vir vrednosti podatkovne baze naj se uporabi tečajna lista BSI (Prenos čas
 
 Program naj bo napisan v programskem jeziku Java, brez nepotrebnih odvisnosti, vsebovati mora prevajalno skripto, zaželjen je Maven, lahko tudi ANT. Program mora biti zapakiran v arhivsko datoteko, ki omogoča uporabniku prijazno izvajanje.
 
+## Install
+
+Requirements:
+
+  - Java 8 (Oracle JRE)
+
+Fetch the latest [release](https://github.com/Glusk/tecajnica/releases) `*.jar` file and double-click to run.
+
+If that doesn't work, run the program from the command line:
+
+``` bash
+java -jar tecajnica-<LATEST_RELEASE_TAG>.jar
+```
 ## Releases
 
 Use the [release](./release.sh) script with the following arguments:
