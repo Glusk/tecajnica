@@ -1,5 +1,7 @@
 # Tečajnica
 
+[![Build Status](https://travis-ci.com/Glusk/tecajnica.svg?branch=master)](https://travis-ci.com/Glusk/tecajnica)
+
 Moja rešitev testne naloge podjetja [irose](https://www.i-rose.si/).
 
 ## Naloga
