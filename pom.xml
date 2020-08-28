@@ -37,7 +37,7 @@
         <configuration>
           <archive>
             <manifest>
-              <mainClass>com.github.glusk2.App</mainClass>
+              <mainClass>com.github.glusk.tecajnica.App</mainClass>
             </manifest>
           </archive>
           <descriptorRefs>
