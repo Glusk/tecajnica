@@ -2,6 +2,9 @@
 
 [![Build Status](https://travis-ci.com/Glusk/tecajnica.svg?branch=master)](https://travis-ci.com/Glusk/tecajnica)
 
+[![LoC](https://tokei.rs/b1/github/glusk/tecajnica)](https://github.com/Glusk/tecajnica)
+[![Hits-of-Code](https://hitsofcode.com/github/glusk/tecajnica?branch=master)](https://hitsofcode.com/view/github/glusk/tecajnica?branch=master)
+
 Moja rešitev testne naloge podjetja [irose](https://www.i-rose.si/).
 
 ## Naloga
